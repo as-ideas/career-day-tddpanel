@@ -1,0 +1,33 @@
+html,body {
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+}
+
+
+.full-height {
+    height: 100%
+}
+
+.row {
+    display: flex;
+}
+
+.column {
+    flex: 1;
+}
+
+.container--result {
+    overflow: scroll;
+    height: 200px;
+}
+
+.remaining-height {
+    height: calc(100% - 35px);
+}
+
+.statusPanel {
+    padding: 5px;
+    height: 20px;
+    border-bottom: 1px solid gray;
+}

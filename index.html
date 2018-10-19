@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>TDD-Panel</title>
+</head>
+
+<link rel="stylesheet" href="lib/codemirror/lib/codemirror.css">
+<link rel="stylesheet" href="tddpanel.css">
+
+<script src="lib/codemirror/lib/codemirror.js"></script>
+<script src="lib/codemirror/mode/javascript/javascript.js"></script>
+
+<script src="lib/lodash.min.js"></script>
+<script src="lib/babel.min.js"></script>
+<script src="lib/chai.min.js"></script>
+<script src="lib/mocha.js"></script>
+
+</head>
+
+<body>
+    <main class="full-height">
+        <div class="statusPanel"><b>TDDPanel</b> <span id="status">started ...</span></div>
+        <div class="row remaining-height">
+            <div class="column">
+                <textarea id="testEditor"> </textarea>
+            </div>
+
+            <div class="column">
+                <textarea id="codeEditor"> </textarea>
+            </div>
+        </div>
+    </main>
+
+        <script>
+
+            var testCodeStr = `
+  describe('#indexOf()', function() {
+    it('should return -1 when the value is not present', function() {
+      assert.equal([1,2,3].indexOf(4), -1);
+    });
+  });`;
+            var codeStr = "";
+            try {
+                JSON.parse(localStorage.getItem("tddpanel.test")) || '';
+                JSON.parse(localStorage.getItem("tddpanel.code")) || '';
+            } catch (e) {
+                localStorage.setItem("tddpanel.test", testCodeStr);
+                localStorage.setItem("tddpanel.code", codeStr);
+            }
+
+            var testEditor = null;
+            var codeEditor = null;
+
+            function saveCode() {
+                codeStr = codeEditor.getValue()
+                localStorage.setItem("tddpanel.code", JSON.stringify(codeStr))
+            }
+
+            function saveTestCode() {
+                testCodeStr = testEditor.getValue()
+                localStorage.setItem("tddpanel.test", JSON.stringify(testCodeStr))
+            }
+
+            function chaiWrapper(code, testCode) {
+                return `${code} describe('TDDPanel', function() { ${testCode} });`
+            }
+
+            function transformBabel(code) {
+                return  Babel.transform(code, { presets: ['es2015'] }).code;
+            }
+
+            function compileAndTest() {
+                try {
+                    console.log(eval(codeStr))
+                } catch (e) {
+                    console.error('failed code')
+                }
+
+                try {
+                    console.log('codestr', codeStr)
+                    console.log('testCodeStr', testCodeStr)
+                    let str = transformBabel(chaiWrapper(codeStr, testCodeStr));
+                    console.log('str', str)
+                    eval(str)
+                } catch (e) {
+                    console.error('failed test ')
+                }
+
+            }
+
+            var editorSettings = {
+                mode: "javascript",
+                lineNumbers: true,
+                lineWrapping: true,
+                extraKeys: {
+                    "Ctrl-Space": () => { compileAndTest() },
+                    "Cmd-Space": () => { compileAndTest() }
+                },
+                gutters: ["CodeMirror-linenumbers"],
+            };
+
+            var testEditorElement = document.getElementById("testEditor")
+            var testEditor = CodeMirror.fromTextArea(testEditorElement, editorSettings);
+            testEditor.setSize("100%", "100%");
+            testEditor.setValue(testCodeStr);
+            testEditor.on("change", _.debounce(saveTestCode.bind(this), 250))
+
+            var codeEditorElement = document.getElementById("codeEditor")
+            var codeEditor = CodeMirror.fromTextArea(codeEditorElement, editorSettings);
+            codeEditor.setValue(codeStr);
+            codeEditor.setSize("100%", "100%");
+            codeEditor.on("change", _.debounce(saveCode.bind(this), 250))
+
+
+            mocha.setup('tdd');
+
+            let str = transformBabel(chaiWrapper(codeStr, testCodeStr));
+            var blob = new Blob([JSON.stringify(str)], {type : 'application/json'});
+            var file = new File([blob], 'testsuite.js')
+        </script>
+</body>
+
+</html>
