@@ -17,13 +17,17 @@
 <script src="lib/lodash.min.js"></script>
 <script src="lib/babel.min.js"></script>
 <script src="lib/chai.min.js"></script>
-<script src="lib/mocha.js"></script>
 
 </head>
 
 <body>
     <main class="full-height">
-        <div class="statusPanel"><b>TDDPanel</b> <span id="status">started ...</span></div>
+        <div class="right">
+            <button class="executeButton" title="CTRL+SPACE or CMD+SPACE" id="execute">Execute Tests!</button>
+        </div>
+
+        <div id="status" class="statusPanel"><b>TDDPanel</b> Tests on the left, Code on the right </div>
+
         <div class="row remaining-height">
             <div class="column">
                 <textarea id="testEditor"> </textarea>
@@ -35,93 +39,130 @@
         </div>
     </main>
 
-        <script>
+    <script>
 
-            var testCodeStr = `
-  describe('#indexOf()', function() {
-    it('should return -1 when the value is not present', function() {
-      assert.equal([1,2,3].indexOf(4), -1);
+        var testCodeStr = `
+  describe('test()', function() {
+    it('should return 1', function() {
+        let res = test();
+      assert.equal(res, 2);
     });
   });`;
-            var codeStr = "";
+        var codeStr = `function test() { 
+  console.log('hi there'); 
+  return 1; 
+}
+`;
+        try {
+            JSON.parse(localStorage.getItem("tddpanel.test")) || '';
+            JSON.parse(localStorage.getItem("tddpanel.code")) || '';
+        } catch (e) {
+            localStorage.setItem("tddpanel.test", testCodeStr);
+            localStorage.setItem("tddpanel.code", codeStr);
+        }
+
+        var testEditor = null;
+        var codeEditor = null;
+        var statusElement = document.getElementById('status')
+
+        var executeButton = document.getElementById('execute');
+        executeButton.onclick = (e) => {
+            e.preventDefault()
+            compileAndTest();
+        }
+
+        function saveCode() {
+            codeStr = codeEditor.getValue()
+            localStorage.setItem("tddpanel.code", JSON.stringify(codeStr))
+        }
+
+        function saveTestCode() {
+            testCodeStr = testEditor.getValue()
+            localStorage.setItem("tddpanel.test", JSON.stringify(testCodeStr))
+        }
+
+        function transformBabel(code) {
+            return Babel.transform(code, { presets: ['es2015'] }).code;
+        }
+
+        function displayTestResult() {
+            if (testPassed) {
+                statusElement.classList.remove("status__failed");
+                statusElement.classList.remove("status__passed");
+                statusElement.classList.add("status__passed");
+            } else {
+                statusElement.classList.remove("status__passed");
+                statusElement.classList.remove("status__failed");
+                statusElement.classList.add("status__failed");
+            }
+        }
+
+        function compileAndTest() {
+            let str = transformBabel(codeStr + "\n" + testCodeStr);
+            eval(str)
+
+            displayTestResult();
+        }
+
+        var editorSettings = {
+            mode: "javascript",
+            lineNumbers: true,
+            lineWrapping: true,
+            extraKeys: {
+                "Ctrl-Space": () => { compileAndTest() },
+                "Cmd-Space": () => { compileAndTest() }
+            },
+            gutters: ["CodeMirror-linenumbers"],
+        };
+
+        var testEditorElement = document.getElementById("testEditor")
+        var testEditor = CodeMirror.fromTextArea(testEditorElement, editorSettings);
+        testEditor.setSize("100%", "100%");
+        testEditor.setValue(testCodeStr);
+        testEditor.on("change", _.debounce(saveTestCode.bind(this), 250))
+
+        var codeEditorElement = document.getElementById("codeEditor")
+        var codeEditor = CodeMirror.fromTextArea(codeEditorElement, editorSettings);
+        codeEditor.setValue(codeStr);
+        codeEditor.setSize("100%", "100%");
+        codeEditor.on("change", _.debounce(saveCode.bind(this), 250))
+
+
+        // provide environment with assert style matchers 
+        window.assert = chai.assert;
+        console.info("using chai's assert library: https://www.chaijs.com/api/assert/")
+
+        // poor mans bdd test framework
+        function collectTestResults(res) {
+            // if one fails, they all fail
+
+            if (window.testPassed == undefined) {
+                window.testPassed = true;
+            }
+
+            window.testPassed = window.testPassed && res;
+        }
+
+        window.describe = function (str, cb) {
+            window.testPassed = true;
+            console.info('#### ' + str)
+            return cb();
+        }
+
+        window.it = function (str, cb) {
+            console.info('######### ' + str);
             try {
-                JSON.parse(localStorage.getItem("tddpanel.test")) || '';
-                JSON.parse(localStorage.getItem("tddpanel.code")) || '';
-            } catch (e) {
-                localStorage.setItem("tddpanel.test", testCodeStr);
-                localStorage.setItem("tddpanel.code", codeStr);
+                cb();
+                console.info("#########: PASSED");
+                collectTestResults(true)
+
+            } catch (ex) {
+                console.error("#########: FAILED " + ex.message);
+                collectTestResults(false)
             }
+        }
 
-            var testEditor = null;
-            var codeEditor = null;
-
-            function saveCode() {
-                codeStr = codeEditor.getValue()
-                localStorage.setItem("tddpanel.code", JSON.stringify(codeStr))
-            }
-
-            function saveTestCode() {
-                testCodeStr = testEditor.getValue()
-                localStorage.setItem("tddpanel.test", JSON.stringify(testCodeStr))
-            }
-
-            function chaiWrapper(code, testCode) {
-                return `${code} describe('TDDPanel', function() { ${testCode} });`
-            }
-
-            function transformBabel(code) {
-                return  Babel.transform(code, { presets: ['es2015'] }).code;
-            }
-
-            function compileAndTest() {
-                try {
-                    console.log(eval(codeStr))
-                } catch (e) {
-                    console.error('failed code')
-                }
-
-                try {
-                    console.log('codestr', codeStr)
-                    console.log('testCodeStr', testCodeStr)
-                    let str = transformBabel(chaiWrapper(codeStr, testCodeStr));
-                    console.log('str', str)
-                    eval(str)
-                } catch (e) {
-                    console.error('failed test ')
-                }
-
-            }
-
-            var editorSettings = {
-                mode: "javascript",
-                lineNumbers: true,
-                lineWrapping: true,
-                extraKeys: {
-                    "Ctrl-Space": () => { compileAndTest() },
-                    "Cmd-Space": () => { compileAndTest() }
-                },
-                gutters: ["CodeMirror-linenumbers"],
-            };
-
-            var testEditorElement = document.getElementById("testEditor")
-            var testEditor = CodeMirror.fromTextArea(testEditorElement, editorSettings);
-            testEditor.setSize("100%", "100%");
-            testEditor.setValue(testCodeStr);
-            testEditor.on("change", _.debounce(saveTestCode.bind(this), 250))
-
-            var codeEditorElement = document.getElementById("codeEditor")
-            var codeEditor = CodeMirror.fromTextArea(codeEditorElement, editorSettings);
-            codeEditor.setValue(codeStr);
-            codeEditor.setSize("100%", "100%");
-            codeEditor.on("change", _.debounce(saveCode.bind(this), 250))
-
-
-            mocha.setup('tdd');
-
-            let str = transformBabel(chaiWrapper(codeStr, testCodeStr));
-            var blob = new Blob([JSON.stringify(str)], {type : 'application/json'});
-            var file = new File([blob], 'testsuite.js')
-        </script>
+    </script>
 </body>
 
 </html>
