@@ -23,6 +23,7 @@
 <body>
     <main class="full-height">
         <div class="right">
+            <button class="loadDemoButton" title="load demo" id="demo">demo</button>
             <button class="executeButton" title="CTRL+SPACE or CMD+SPACE" id="execute">Execute Tests!</button>
         </div>
 
@@ -41,20 +42,23 @@
 
     <script>
 
-        window.testPassed = true;
 
-        var testCodeStr = `
+        var DEFAULT_TEST_CODE = `
   describe('test()', function() {
     it('should return 1', function() {
-        let res = test();
-      assert.equal(res, 2);
+      assert.equal(test(), 1);
     });
   });`;
-        var codeStr = `function test() { 
-  console.log('hi there'); 
-  return 1; 
+        var DEFAULT_CODE = `function test() { 
+  console.log('hi there, checkout out the console!'); 
+  return 2; 
 }
 `;
+        let testCodeStr = '';
+        let codeStr = '';
+        window.testPassed = true;
+
+
         try {
             testCodeStr = JSON.parse(localStorage.getItem("tddpanel.test"));
         } catch (e) {
@@ -75,6 +79,20 @@
         executeButton.onclick = (e) => {
             e.preventDefault()
             compileAndTest();
+        }
+
+        var loadDemoButton = document.getElementById('demo')
+        loadDemoButton.onclick = (e) => {
+            e.preventDefault();
+            loadDemo();
+        }
+
+        function loadDemo() {
+            if (confirm("Warning: This will reset your current editor values! Confirm?")) {
+
+                testEditor.setValue(DEFAULT_TEST_CODE)
+                codeEditor.setValue(DEFAULT_CODE)
+            }
         }
 
         function saveCode() {
