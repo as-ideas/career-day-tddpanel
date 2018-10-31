@@ -41,6 +41,8 @@
 
     <script>
 
+        window.testPassed = true;
+
         var testCodeStr = `
   describe('test()', function() {
     it('should return 1', function() {
@@ -54,10 +56,14 @@
 }
 `;
         try {
-            JSON.parse(localStorage.getItem("tddpanel.test")) || '';
-            JSON.parse(localStorage.getItem("tddpanel.code")) || '';
+            testCodeStr = JSON.parse(localStorage.getItem("tddpanel.test"));
         } catch (e) {
             localStorage.setItem("tddpanel.test", testCodeStr);
+        }
+
+        try {
+            codeStr = JSON.parse(localStorage.getItem("tddpanel.code"));
+        } catch (e) {
             localStorage.setItem("tddpanel.code", codeStr);
         }
 
