@@ -60,15 +60,17 @@
 
 
         try {
-            testCodeStr = JSON.parse(localStorage.getItem("tddpanel.test"));
+            testCodeStr = JSON.parse(localStorage.getItem("tddpanel.test") || '');
         } catch (e) {
-            localStorage.setItem("tddpanel.test", testCodeStr);
+            localStorage.setItem("tddpanel.test", DEFAULT_TEST_CODE);
+	    testCodeStr = DEFAULT_TEST_CODE;
         }
 
         try {
-            codeStr = JSON.parse(localStorage.getItem("tddpanel.code"));
+            codeStr = JSON.parse(localStorage.getItem("tddpanel.code") || '');
         } catch (e) {
-            localStorage.setItem("tddpanel.code", codeStr);
+            localStorage.setItem("tddpanel.code", DEFAULT_CODE);
+	    codeStr = DEFAULT_CODE;
         }
 
         var testEditor = null;
